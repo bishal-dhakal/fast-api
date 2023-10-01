@@ -3,6 +3,8 @@ from . import schemas, models
 from .database import engine, SessionLocal
 from sqlalchemy.orm import Session
 from typing import List
+from .hashing import Hash
+
 
 app = FastAPI()
 
@@ -28,13 +30,13 @@ def create(request: schemas.Blog, db: Session = Depends(get_db)):
     return new_blog
 
 
-@app.get("/blog", status_code=200,response_model=List[schemas.ShowBlog])
+@app.get("/blog", status_code=200, response_model=List[schemas.ShowBlog])
 def all_blog(db: Session = Depends(get_db)):
     blogs = db.query(models.Blog).all()
     return blogs
 
 
-@app.get("/blog/{id}", status_code=200,response_model=schemas.ShowBlog)
+@app.get("/blog/{id}", status_code=200, response_model=schemas.ShowBlog)
 def show(id, response: Response, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == id).first()
     if not blog:
@@ -73,9 +75,14 @@ def update(id, request: schemas.Blog, db: Session = Depends(get_db)):
     db.commit()
     return "updated"
 
-@app.post('/user')
-def create_user(request:schemas.User, db: Session = Depends(get_db)):
-    new_user = models.User(name= request.name, email= request.email, password=request.password)
+
+@app.post("/user")
+def create_user(request: schemas.User, db: Session = Depends(get_db)):
+    new_user = models.User(
+        name=request.name,
+        email=request.email,
+        password=Hash.bcrypt(request.password),
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
